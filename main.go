@@ -13,6 +13,7 @@ import (
 )
 
 var ignoreDirs []string
+var varrrrrr bool
 
 func main() {
 	d := flag.String("ignore-dirs", ".checkout_git", "Dir patterns (static string) to ignore, comma-separated")
@@ -21,12 +22,13 @@ func main() {
 		ignoreDirs = strings.Split(*d, ",")
 	}
 
+	var commitRange string
+
 	args := flag.Args()
-	if len(args) != 1 {
-		die("Usage: %s commit..commit\n", os.Args[0])
+	if len(args) >= 1 {
+		commitRange = args[0]
 	}
 
-	commitRange := args[0]
 	files := changedFiles(commitRange)
 
 	cwd, err := os.Getwd()
@@ -160,12 +162,32 @@ func gitRoot() string {
 func changedFiles(commitRange string) []string {
 	root := gitRoot()
 
-	cmd := exec.Command("git", "diff-tree", "--no-commit-id", "--name-only", "-r", commitRange)
-	dat, err := cmd.Output()
-	if err != nil {
-		die("Could not run git diff-tree: %v", err)
+	var cmd *exec.Cmd
+	var err error
+	var diffTree, localCached, local []byte
+
+	if commitRange != "" {
+		cmd = exec.Command("git", "diff-tree", "--no-commit-id", "--name-only", "-r", commitRange)
+		diffTree, err = cmd.Output()
+		if err != nil {
+			die("Could not run git diff-tree: %v", err)
+		}
 	}
-	files := strings.Split(string(dat), "\n")
+
+	cmd = exec.Command("git", "diff", "--cached", "--name-only")
+	localCached, err = cmd.Output()
+	if err != nil {
+		die("Could not run git diff --cached --name-only: %v", err)
+	}
+
+	cmd = exec.Command("git", "diff", "--name-only")
+	local, err = cmd.Output()
+	if err != nil {
+		die("Could not run git diff --name-only: %v", err)
+	}
+
+	changed := string(diffTree) + string(localCached) + string(local)
+	files := strings.Split(changed, "\n")
 	var res []string
 	for _, f := range files {
 		f = strings.TrimSpace(f)
