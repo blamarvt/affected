@@ -94,7 +94,7 @@ func main() {
 
 	})
 	if scanErr != nil {
-		die("Package scan incomplete, aborting")
+		die("Package scan incomplete, aborting: %s", scanErr)
 	}
 
 	// filter the package list to those affected
